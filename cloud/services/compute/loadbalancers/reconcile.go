@@ -73,8 +73,8 @@ func getInternalLoadBalancerName(lbSpec infrav1.LoadBalancerSpec) string {
 }
 
 func getExternalLoadBalancerName(lbSpec infrav1.LoadBalancerSpec) string {
-	if lbSpec.ExternalLoadBalancer != nil {
-		return ptr.Deref(lbSpec.ExternalLoadBalancer.Name, infrav1.APIServerRoleTagValue)
+	if lbSpec.ExternalLoadBalancerConfig != nil {
+		return ptr.Deref(lbSpec.ExternalLoadBalancerConfig.Name, infrav1.APIServerRoleTagValue)
 	}
 	return infrav1.APIServerRoleTagValue
 }

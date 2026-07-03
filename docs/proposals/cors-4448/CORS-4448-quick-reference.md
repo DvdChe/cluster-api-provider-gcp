@@ -19,8 +19,9 @@ RegionalInternalExternal = LoadBalancerType("RegionalInternalExternal")
 type LoadBalancerSpec struct {
     // ... existing fields ...
     
-    // NEW: Configuration for external load balancer
-    ExternalLoadBalancer *LoadBalancer `json:"externalLoadBalancer,omitempty"`
+    // NEW: Configuration (name, IP) applied to the external Load Balancer,
+    // whichever scope (global vs regional) LoadBalancerType selects.
+    ExternalLoadBalancerConfig *LoadBalancer `json:"externalLoadBalancerConfig,omitempty"`
 }
 ```
 
@@ -129,7 +130,7 @@ spec:
   region: us-central1
   loadBalancer:
     loadBalancerType: RegionalExternal
-    externalLoadBalancer:
+    externalLoadBalancerConfig:
       name: "my-custom-lb"
       ipAddress: "10.1.2.3"
 ```
@@ -144,7 +145,7 @@ spec:
   region: us-central1
   loadBalancer:
     loadBalancerType: RegionalInternalExternal
-    externalLoadBalancer:
+    externalLoadBalancerConfig:
       name: "external-api"
     internalLoadBalancer:
       name: "internal-api"

@@ -409,11 +409,16 @@ type LoadBalancerSpec struct {
 	// +optional
 	LoadBalancerType *LoadBalancerType `json:"loadBalancerType,omitempty"`
 
-	// ExternalLoadBalancer is the configuration for an External Proxy Load Balancer.
+	// ExternalLoadBalancerConfig is the configuration (name, IP) applied to the
+	// external Load Balancer created by the controller. Its scope (global vs
+	// regional) is determined solely by LoadBalancerType; this field only carries
+	// naming and address settings and does not itself select a load balancer kind.
 	// Applies to all load balancer types that include an external component:
-	// External, InternalExternal, RegionalExternal, and RegionalInternalExternal.
+	// External (global), InternalExternal (global external + regional internal),
+	// RegionalExternal (regional), and RegionalInternalExternal (regional external
+	// + regional internal). Ignored when LoadBalancerType is Internal.
 	// +optional
-	ExternalLoadBalancer *LoadBalancer `json:"externalLoadBalancer,omitempty"`
+	ExternalLoadBalancerConfig *LoadBalancer `json:"externalLoadBalancerConfig,omitempty"`
 
 	// InternalLoadBalancer is the configuration for an Internal Passthrough Network Load Balancer.
 	// +optional
