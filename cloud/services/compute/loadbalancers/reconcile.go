@@ -318,7 +318,7 @@ func (s *Service) createRegionalExternalLoadBalancer(ctx context.Context, instan
 	}
 	s.scope.Network().APIServerHealthCheck = ptr.To[string](healthcheck.SelfLink)
 
-	backendsvc, err := s.createOrGetRegionalBackendService(ctx, name, instancegroups, healthcheck)
+	backendsvc, err := s.createOrGetRegionalBackendService(ctx, name, loadBalanceTrafficExternalManaged, instancegroups, healthcheck)
 	if err != nil {
 		return err
 	}
@@ -358,7 +358,7 @@ func (s *Service) createInternalLoadBalancer(ctx context.Context, name string, l
 	}
 	s.scope.Network().APIInternalHealthCheck = ptr.To[string](healthcheck.SelfLink)
 
-	backendsvc, err := s.createOrGetRegionalBackendService(ctx, name, instancegroups, healthcheck)
+	backendsvc, err := s.createOrGetRegionalBackendService(ctx, name, loadBalanceTrafficInternal, instancegroups, healthcheck)
 	if err != nil {
 		return err
 	}
@@ -526,33 +526,32 @@ func (s *Service) createOrGetBackendService(ctx context.Context, lbname string, 
 	return backendsvc, nil
 }
 
-// createOrGetRegionalBackendService is used for internal passthrough load balancers.
-func (s *Service) createOrGetRegionalBackendService(ctx context.Context, lbname string, instancegroups []*compute.InstanceGroup, healthcheck *compute.HealthCheck) (*compute.BackendService, error) {
+// createOrGetRegionalBackendService reconciles a regional backend service.
+// scheme selects the load-balancing scheme:
+//   - EXTERNAL_MANAGED for the Regional External Proxy LB backend
+//   - INTERNAL for the Regional Internal Passthrough LB backend
+//
+// Passing scheme explicitly matters when both are created (RegionalInternalExternal):
+// the shared LoadBalancerType alone cannot disambiguate the two call sites.
+// maxConnections is set only for EXTERNAL_MANAGED; GCP rejects it on INTERNAL
+// passthrough backend services.
+func (s *Service) createOrGetRegionalBackendService(ctx context.Context, lbname, scheme string, instancegroups []*compute.InstanceGroup, healthcheck *compute.HealthCheck) (*compute.BackendService, error) {
 	log := log.FromContext(ctx)
-	lbSpec := s.scope.LoadBalancer()
-	lbType := ptr.Deref(lbSpec.LoadBalancerType, infrav1.External)
 	backendsvcSpec := s.scope.BackendServiceSpec(lbname)
-	// Regional backend services always use CONNECTION mode for passthrough behavior.
-	// maxConnections is only allowed for the RegionalExternal (EXTERNAL_MANAGED) case;
-	// GCP rejects it on INTERNAL passthrough backend services.
 	var maxConns int64
-	if lbType == infrav1.RegionalExternal {
+	if scheme == loadBalanceTrafficExternalManaged {
 		// https://cloud.google.com/sql/docs/postgres/flags#postgres-m
 		maxConns = 1000
 	}
 	backendsvcSpec.Backends = createBackends(instancegroups, loadBalancingModeConnection, maxConns)
 	backendsvcSpec.HealthChecks = []string{healthcheck.SelfLink}
 	backendsvcSpec.Region = s.scope.Region()
+	backendsvcSpec.LoadBalancingScheme = scheme
 
-	if lbType == infrav1.RegionalExternal {
-		// When using a regional external load balancer, we need to set the load balancing scheme to EXTERNAL_MANAGED
-		// and specify the port name as "apiserver"
-		backendsvcSpec.LoadBalancingScheme = string(loadBalanceTrafficExternalManaged)
+	if scheme == loadBalanceTrafficExternalManaged {
 		backendsvcSpec.PortName = infrav1.APIServerRoleTagValue
 	} else {
-		backendsvcSpec.LoadBalancingScheme = string(loadBalanceTrafficInternal)
-		network := s.scope.Network()
-		if network.SelfLink != nil {
+		if network := s.scope.Network(); network.SelfLink != nil {
 			backendsvcSpec.Network = *network.SelfLink
 		}
 		backendsvcSpec.PortName = ""
