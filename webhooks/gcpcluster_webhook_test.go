@@ -20,8 +20,65 @@ import (
 	"testing"
 
 	. "github.com/onsi/gomega"
+	"k8s.io/utils/ptr"
 	infrav1 "sigs.k8s.io/cluster-api-provider-gcp/api/v1beta1"
 )
+
+func TestGCPCluster_ValidateCreate(t *testing.T) {
+	tests := []struct {
+		name        string
+		cluster     *infrav1.GCPCluster
+		wantErr     bool
+		wantWarning bool
+	}{
+		{
+			name:    "empty spec passes",
+			cluster: &infrav1.GCPCluster{},
+		},
+		{
+			name: "unknown load balancer type is rejected",
+			cluster: &infrav1.GCPCluster{
+				Spec: infrav1.GCPClusterSpec{
+					LoadBalancer: infrav1.LoadBalancerSpec{
+						LoadBalancerType: ptr.To(infrav1.LoadBalancerType("Weird")),
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "ExternalLoadBalancerConfig with Internal LB emits warning",
+			cluster: &infrav1.GCPCluster{
+				Spec: infrav1.GCPClusterSpec{
+					LoadBalancer: infrav1.LoadBalancerSpec{
+						LoadBalancerType: ptr.To(infrav1.Internal),
+						ExternalLoadBalancerConfig: &infrav1.LoadBalancer{
+							Name: ptr.To("ignored"),
+						},
+					},
+				},
+			},
+			wantWarning: true,
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			g := NewWithT(t)
+			warn, err := (&GCPCluster{}).ValidateCreate(t.Context(), tt.cluster)
+			if tt.wantErr {
+				g.Expect(err).To(HaveOccurred())
+			} else {
+				g.Expect(err).NotTo(HaveOccurred())
+			}
+			if tt.wantWarning {
+				g.Expect(warn).NotTo(BeEmpty())
+			} else {
+				g.Expect(warn).To(BeEmpty())
+			}
+		})
+	}
+}
 
 func TestGCPCluster_ValidateUpdate(t *testing.T) {
 	g := NewWithT(t)

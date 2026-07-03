@@ -19,6 +19,7 @@ package v1beta1
 import (
 	"fmt"
 
+	"k8s.io/apimachinery/pkg/util/validation/field"
 	clusterv1beta1 "sigs.k8s.io/cluster-api/api/core/v1beta1"
 )
 
@@ -423,6 +424,37 @@ type LoadBalancerSpec struct {
 	// InternalLoadBalancer is the configuration for an Internal Passthrough Network Load Balancer.
 	// +optional
 	InternalLoadBalancer *LoadBalancer `json:"internalLoadBalancer,omitempty"`
+}
+
+var validLoadBalancerTypes = map[LoadBalancerType]struct{}{
+	External:                 {},
+	RegionalExternal:         {},
+	Internal:                 {},
+	InternalExternal:         {},
+	RegionalInternalExternal: {},
+}
+
+// Validate returns admission warnings and a field.ErrorList for a LoadBalancerSpec.
+// The kubebuilder Enum marker on LoadBalancerType only enforces the CRD schema;
+// this runs the same check plus a semantic cross-field check that catches
+// configuration that is silently ignored by the reconciler.
+func (s *LoadBalancerSpec) Validate(fldPath *field.Path) (warnings []string, errs field.ErrorList) {
+	if s.LoadBalancerType != nil {
+		if _, ok := validLoadBalancerTypes[*s.LoadBalancerType]; !ok {
+			errs = append(errs, field.NotSupported(fldPath.Child("loadBalancerType"), *s.LoadBalancerType, []string{
+				string(External), string(RegionalExternal), string(Internal),
+				string(InternalExternal), string(RegionalInternalExternal),
+			}))
+		}
+	}
+
+	if s.ExternalLoadBalancerConfig != nil && s.LoadBalancerType != nil && *s.LoadBalancerType == Internal {
+		warnings = append(warnings, fmt.Sprintf(
+			"%s is set but LoadBalancerType is Internal, which has no external component; the field will be ignored",
+			fldPath.Child("externalLoadBalancerConfig").String()))
+	}
+
+	return warnings, errs
 }
 
 // SubnetSpec configures an GCP Subnet.

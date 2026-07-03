@@ -55,8 +55,13 @@ func (*GCPCluster) Default(_ context.Context, _ *infrav1.GCPCluster) error {
 	return nil
 }
 
-func (*GCPCluster) ValidateCreate(_ context.Context, _ *infrav1.GCPCluster) (admission.Warnings, error) {
-	return nil, nil
+func (*GCPCluster) ValidateCreate(_ context.Context, c *infrav1.GCPCluster) (admission.Warnings, error) {
+	clusterlog.Info("validate create", "name", c.Name)
+	warnings, allErrs := c.Spec.LoadBalancer.Validate(field.NewPath("spec", "loadBalancer"))
+	if len(allErrs) == 0 {
+		return warnings, nil
+	}
+	return warnings, apierrors.NewInvalid(infrav1.GroupVersion.WithKind("GCPCluster").GroupKind(), c.Name, allErrs)
 }
 
 func (*GCPCluster) ValidateUpdate(_ context.Context, old, c *infrav1.GCPCluster) (admission.Warnings, error) {
