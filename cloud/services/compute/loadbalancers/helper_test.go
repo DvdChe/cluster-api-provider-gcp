@@ -17,6 +17,9 @@ limitations under the License.
 package loadbalancers
 
 import (
+	"context"
+	"errors"
+	"strings"
 	"testing"
 
 	"github.com/google/go-cmp/cmp"
@@ -396,4 +399,71 @@ func TestCreateBackends(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestRunDeleteSteps(t *testing.T) {
+	t.Run("all succeed clears state and returns nil", func(t *testing.T) {
+		cleared := map[string]bool{}
+		clear := func(k string) func() { return func() { cleared[k] = true } }
+		steps := []deleteStep{
+			{"ForwardingRule", func() error { return nil }, clear("ForwardingRule")},
+			{"Address", func() error { return nil }, clear("Address")},
+			{"HealthCheck", func() error { return nil }, clear("HealthCheck")},
+		}
+		if err := runDeleteSteps(context.TODO(), "lb", steps); err != nil {
+			t.Fatalf("unexpected error: %v", err)
+		}
+		for _, k := range []string{"ForwardingRule", "Address", "HealthCheck"} {
+			if !cleared[k] {
+				t.Errorf("expected %s to have been cleared", k)
+			}
+		}
+	})
+
+	t.Run("one failure does not stop remaining independent steps", func(t *testing.T) {
+		attempted := map[string]bool{}
+		cleared := map[string]bool{}
+		mkStep := func(k string, fail bool) deleteStep {
+			return deleteStep{
+				kind: k,
+				delete: func() error {
+					attempted[k] = true
+					if fail {
+						return errors.New("boom")
+					}
+					return nil
+				},
+				clear: func() { cleared[k] = true },
+			}
+		}
+		steps := []deleteStep{
+			mkStep("ForwardingRule", true),
+			mkStep("Address", false),
+			mkStep("TargetTCPProxy", true),
+			mkStep("BackendService", false),
+			mkStep("HealthCheck", false),
+		}
+		err := runDeleteSteps(context.TODO(), "lb", steps)
+		if err == nil {
+			t.Fatal("expected aggregated error, got nil")
+		}
+		for _, k := range []string{"ForwardingRule", "Address", "TargetTCPProxy", "BackendService", "HealthCheck"} {
+			if !attempted[k] {
+				t.Errorf("step %s should have been attempted after prior failure", k)
+			}
+		}
+		for _, k := range []string{"ForwardingRule", "TargetTCPProxy"} {
+			if cleared[k] {
+				t.Errorf("step %s failed but was cleared", k)
+			}
+		}
+		for _, k := range []string{"Address", "BackendService", "HealthCheck"} {
+			if !cleared[k] {
+				t.Errorf("step %s succeeded but was not cleared", k)
+			}
+		}
+		if !strings.Contains(err.Error(), "ForwardingRule") || !strings.Contains(err.Error(), "TargetTCPProxy") {
+			t.Errorf("aggregate error missing failing step kinds: %v", err)
+		}
+	})
 }
