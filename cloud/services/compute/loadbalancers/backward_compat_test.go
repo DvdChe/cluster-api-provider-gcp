@@ -1,5 +1,5 @@
 /*
-Copyright 2024 The Kubernetes Authors.
+Copyright 2026 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -226,7 +226,7 @@ func TestBackwardCompatibility_DefaultNaming(t *testing.T) {
 		{
 			name: "Custom external LB name is respected",
 			lbSpec: infrav1.LoadBalancerSpec{
-				ExternalLoadBalancer: &infrav1.LoadBalancer{
+				ExternalLoadBalancerConfig: &infrav1.LoadBalancer{
 					Name: ptr.To("custom-lb"),
 				},
 			},

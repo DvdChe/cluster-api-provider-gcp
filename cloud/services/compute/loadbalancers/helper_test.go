@@ -1,5 +1,5 @@
 /*
-Copyright 2024 The Kubernetes Authors.
+Copyright 2026 The Kubernetes Authors.
 
 Licensed under the Apache License, Version 2.0 (the "License");
 you may not use this file except in compliance with the License.
@@ -163,23 +163,23 @@ func TestGetExternalLoadBalancerName(t *testing.T) {
 		{
 			name: "returns custom name when set",
 			lbSpec: infrav1.LoadBalancerSpec{
-				ExternalLoadBalancer: &infrav1.LoadBalancer{
+				ExternalLoadBalancerConfig: &infrav1.LoadBalancer{
 					Name: ptr.To[string]("custom-external-lb"),
 				},
 			},
 			want: "custom-external-lb",
 		},
 		{
-			name: "returns default name when ExternalLoadBalancer is nil",
+			name: "returns default name when ExternalLoadBalancerConfig is nil",
 			lbSpec: infrav1.LoadBalancerSpec{
-				ExternalLoadBalancer: nil,
+				ExternalLoadBalancerConfig: nil,
 			},
 			want: infrav1.APIServerRoleTagValue,
 		},
 		{
 			name: "returns default name when Name is nil",
 			lbSpec: infrav1.LoadBalancerSpec{
-				ExternalLoadBalancer: &infrav1.LoadBalancer{
+				ExternalLoadBalancerConfig: &infrav1.LoadBalancer{
 					Name: nil,
 				},
 			},
