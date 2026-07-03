@@ -203,6 +203,17 @@ func (s *Service) Delete(ctx context.Context) error {
 	return errors.Join(allErrs...)
 }
 
+// Component kinds used for logging and error attribution during LB teardown.
+// Kept short and stable so an operator scanning logs sees the same tokens
+// consistently across load-balancer variants.
+const (
+	kindForwardingRule = "ForwardingRule"
+	kindAddress        = "Address"
+	kindTargetTCPProxy = "TargetTCPProxy"
+	kindBackendService = "BackendService"
+	kindHealthCheck    = "HealthCheck"
+)
+
 // deleteStep represents one component delete inside a load balancer teardown.
 // It is executed by runDeleteSteps in dependency order; if the delete succeeds,
 // clear runs to zero out the scope's cached reference. A failure is recorded
@@ -240,11 +251,11 @@ func (s *Service) deleteExternalLoadBalancer(ctx context.Context) error {
 	// BackendService; BackendService references HealthCheck. Deleting in this order
 	// avoids "resource in use" from GCP.
 	return runDeleteSteps(ctx, name, []deleteStep{
-		{"ForwardingRule", func() error { return s.deleteForwardingRule(ctx, name) }, func() { net.APIServerForwardingRule = nil }},
-		{"Address", func() error { return s.deleteAddress(ctx, name) }, func() { net.APIServerAddress = nil }},
-		{"TargetTCPProxy", func() error { return s.deleteTargetTCPProxy(ctx) }, func() { net.APIServerTargetProxy = nil }},
-		{"BackendService", func() error { return s.deleteBackendService(ctx, name) }, func() { net.APIServerBackendService = nil }},
-		{"HealthCheck", func() error { return s.deleteHealthCheck(ctx, name) }, func() { net.APIServerHealthCheck = nil }},
+		{kindForwardingRule, func() error { return s.deleteForwardingRule(ctx, name) }, func() { net.APIServerForwardingRule = nil }},
+		{kindAddress, func() error { return s.deleteAddress(ctx, name) }, func() { net.APIServerAddress = nil }},
+		{kindTargetTCPProxy, func() error { return s.deleteTargetTCPProxy(ctx) }, func() { net.APIServerTargetProxy = nil }},
+		{kindBackendService, func() error { return s.deleteBackendService(ctx, name) }, func() { net.APIServerBackendService = nil }},
+		{kindHealthCheck, func() error { return s.deleteHealthCheck(ctx, name) }, func() { net.APIServerHealthCheck = nil }},
 	})
 }
 
@@ -253,11 +264,11 @@ func (s *Service) deleteRegionalExternalLoadBalancer(ctx context.Context) error 
 	name := getExternalLoadBalancerName(s.scope.LoadBalancer())
 	net := s.scope.Network()
 	return runDeleteSteps(ctx, name, []deleteStep{
-		{"regional ForwardingRule", func() error { return s.deleteRegionalForwardingRule(ctx, name) }, func() { net.APIServerForwardingRule = nil }},
-		{"regional Address", func() error { return s.deleteRegionalAddress(ctx, name) }, func() { net.APIServerAddress = nil }},
-		{"regional TargetTCPProxy", func() error { return s.deleteRegionalTargetTCPProxy(ctx) }, func() { net.APIServerTargetProxy = nil }},
-		{"regional BackendService", func() error { return s.deleteRegionalBackendService(ctx, name) }, func() { net.APIServerBackendService = nil }},
-		{"regional HealthCheck", func() error { return s.deleteRegionalHealthCheck(ctx, name) }, func() { net.APIServerHealthCheck = nil }},
+		{"regional " + kindForwardingRule, func() error { return s.deleteRegionalForwardingRule(ctx, name) }, func() { net.APIServerForwardingRule = nil }},
+		{"regional " + kindAddress, func() error { return s.deleteRegionalAddress(ctx, name) }, func() { net.APIServerAddress = nil }},
+		{"regional " + kindTargetTCPProxy, func() error { return s.deleteRegionalTargetTCPProxy(ctx) }, func() { net.APIServerTargetProxy = nil }},
+		{"regional " + kindBackendService, func() error { return s.deleteRegionalBackendService(ctx, name) }, func() { net.APIServerBackendService = nil }},
+		{"regional " + kindHealthCheck, func() error { return s.deleteRegionalHealthCheck(ctx, name) }, func() { net.APIServerHealthCheck = nil }},
 	})
 }
 
@@ -267,10 +278,10 @@ func (s *Service) deleteInternalLoadBalancer(ctx context.Context, name string) e
 	// Passthrough (INTERNAL) LB has no TargetTCPProxy; ForwardingRule references
 	// BackendService directly.
 	return runDeleteSteps(ctx, name, []deleteStep{
-		{"ForwardingRule", func() error { return s.deleteRegionalForwardingRule(ctx, name) }, func() { net.APIInternalForwardingRule = nil }},
-		{"InternalAddress", func() error { return s.deleteInternalAddress(ctx, name) }, func() { net.APIInternalAddress = nil }},
-		{"RegionalBackendService", func() error { return s.deleteRegionalBackendService(ctx, name) }, func() { net.APIInternalBackendService = nil }},
-		{"RegionalHealthCheck", func() error { return s.deleteRegionalHealthCheck(ctx, name) }, func() { net.APIInternalHealthCheck = nil }},
+		{kindForwardingRule, func() error { return s.deleteRegionalForwardingRule(ctx, name) }, func() { net.APIInternalForwardingRule = nil }},
+		{"Internal" + kindAddress, func() error { return s.deleteInternalAddress(ctx, name) }, func() { net.APIInternalAddress = nil }},
+		{"Regional" + kindBackendService, func() error { return s.deleteRegionalBackendService(ctx, name) }, func() { net.APIInternalBackendService = nil }},
+		{"Regional" + kindHealthCheck, func() error { return s.deleteRegionalHealthCheck(ctx, name) }, func() { net.APIInternalHealthCheck = nil }},
 	})
 }
 

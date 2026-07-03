@@ -467,11 +467,11 @@ func TestService_ensureRegionalProxyOnlySubnet(t *testing.T) {
 func TestRunDeleteSteps(t *testing.T) {
 	t.Run("all succeed clears state and returns nil", func(t *testing.T) {
 		cleared := map[string]bool{}
-		clear := func(k string) func() { return func() { cleared[k] = true } }
+		mkClear := func(k string) func() { return func() { cleared[k] = true } }
 		steps := []deleteStep{
-			{"ForwardingRule", func() error { return nil }, clear("ForwardingRule")},
-			{"Address", func() error { return nil }, clear("Address")},
-			{"HealthCheck", func() error { return nil }, clear("HealthCheck")},
+			{"ForwardingRule", func() error { return nil }, mkClear("ForwardingRule")},
+			{"Address", func() error { return nil }, mkClear("Address")},
+			{"HealthCheck", func() error { return nil }, mkClear("HealthCheck")},
 		}
 		if err := runDeleteSteps(context.TODO(), "lb", steps); err != nil {
 			t.Fatalf("unexpected error: %v", err)

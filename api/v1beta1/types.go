@@ -449,9 +449,9 @@ func (s *LoadBalancerSpec) Validate(fldPath *field.Path) (warnings []string, err
 	}
 
 	if s.ExternalLoadBalancerConfig != nil && s.LoadBalancerType != nil && *s.LoadBalancerType == Internal {
-		warnings = append(warnings, fmt.Sprintf(
-			"%s is set but LoadBalancerType is Internal, which has no external component; the field will be ignored",
-			fldPath.Child("externalLoadBalancerConfig").String()))
+		warnings = append(warnings,
+			fldPath.Child("externalLoadBalancerConfig").String()+
+				" is set but LoadBalancerType is Internal, which has no external component; the field will be ignored")
 	}
 
 	return warnings, errs
