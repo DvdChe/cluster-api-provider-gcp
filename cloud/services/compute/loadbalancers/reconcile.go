@@ -47,11 +47,40 @@ const (
 	loadBalanceTrafficExternal        = "EXTERNAL"
 	loadBalanceTrafficExternalManaged = "EXTERNAL_MANAGED"
 	addressPurposeGCEEndpoint         = "GCE_ENDPOINT"
+
+	// subnetPurposeRegionalManagedProxy is the GCP subnet purpose value that
+	// designates a proxy-only subnet — required in every region that hosts a
+	// Regional External / Regional Internal HTTP(S) or TCP Proxy Load Balancer.
+	// See https://cloud.google.com/load-balancing/docs/proxy-only-subnets.
+	subnetPurposeRegionalManagedProxy = "REGIONAL_MANAGED_PROXY"
 )
 
 func isRegionalExternalLoadBalancer(lbType infrav1.LoadBalancerType) bool {
 	return lbType == infrav1.RegionalExternal ||
 		lbType == infrav1.RegionalInternalExternal
+}
+
+// ensureRegionalProxyOnlySubnet checks that the cluster's declared subnets
+// include at least one proxy-only subnet (Purpose=REGIONAL_MANAGED_PROXY) in
+// the load balancer's region — a hard prerequisite for a Regional External
+// Proxy LB. Without it, GCP rejects the forwarding rule with an opaque error;
+// failing fast here produces an actionable message pointing at the CAPG spec.
+func (s *Service) ensureRegionalProxyOnlySubnet() error {
+	region := s.scope.Region()
+	for _, subnet := range s.scope.SubnetSpecs() {
+		if subnet.Purpose != subnetPurposeRegionalManagedProxy {
+			continue
+		}
+		// SubnetSpec.Region is optional; an empty value defers to scope.Region().
+		if subnet.Region == "" || subnet.Region == region {
+			return nil
+		}
+	}
+	return fmt.Errorf(
+		"regional external load balancer requires a proxy-only subnet with purpose %q in region %q; "+
+			"add one to spec.network.subnets (see https://cloud.google.com/load-balancing/docs/proxy-only-subnets)",
+		subnetPurposeRegionalManagedProxy, region,
+	)
 }
 
 func shouldCreateExternalLoadBalancer(lbType infrav1.LoadBalancerType) bool {
@@ -287,6 +316,9 @@ func (s *Service) createExternalLoadBalancer(ctx context.Context, lbType infrav1
 
 // createRegionalExternalLoadBalancer creates the components for a Regional External Proxy LoadBalancer.
 func (s *Service) createRegionalExternalLoadBalancer(ctx context.Context, instancegroups []*compute.InstanceGroup) error {
+	if err := s.ensureRegionalProxyOnlySubnet(); err != nil {
+		return err
+	}
 	name := getExternalLoadBalancerName(s.scope.LoadBalancer())
 	healthcheck, err := s.createOrGetRegionalHealthCheck(ctx, name)
 	if err != nil {
