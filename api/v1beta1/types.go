@@ -416,10 +416,10 @@ type LoadBalancerSpec struct {
 	// naming and address settings and does not itself select a load balancer kind.
 	// Applies to all load balancer types that include an external component:
 	// External (global), InternalExternal (global external + regional internal),
-	// RegionalExternal (regional), and RegionalInternalExternal (regional external
-	// + regional internal). Ignored when LoadBalancerType is Internal.
+	// RegionalExternal (regional), and RegionalInternalExternal (regional
+	// external + regional internal). Ignored when LoadBalancerType is Internal.
 	// +optional
-	ExternalLoadBalancerConfig *LoadBalancer `json:"externalLoadBalancerConfig,omitempty"`
+	ExternalLoadBalancerConfig *ExternalLoadBalancer `json:"externalLoadBalancerConfig,omitempty"`
 
 	// InternalLoadBalancer is the configuration for an Internal Passthrough Network Load Balancer.
 	// +optional
@@ -673,6 +673,30 @@ type LoadBalancer struct {
 	// If not set, a new static IP address will be allocated.
 	// For Internal Load Balancers, this must be a valid IP address from the LoadBalancer Subnet.
 	// For Regional External Load Balancers, this must be a valid external IP address in the region.
+	// +optional
+	IPAddress *string `json:"ipAddress,omitempty"`
+}
+
+// ExternalLoadBalancer describes the settings that apply to the external
+// Load Balancer (both Global External and Regional External). It intentionally
+// exposes only the fields that are meaningful for an external LB, so that
+// Internal-only options such as subnet or internalAccess do not leak into the
+// CRD schema for external configuration.
+type ExternalLoadBalancer struct {
+	// Name is the name of the Load Balancer. If not set a default name will be
+	// used. For a Global External Load Balancer the default name is
+	// "api-server". For a Regional External Load Balancer the default name is
+	// also "api-server".
+	// +kubebuilder:validation:Optional
+	// +kubebuilder:validation:Pattern=`(^[1-9][0-9]{0,31}$)|(^[a-z][a-z0-9-]{4,28}[a-z0-9]$)`
+	// +optional
+	Name *string `json:"name,omitempty"`
+
+	// IPAddress is the static IP address to use for the external Load Balancer.
+	// If not set, a new static IP address will be allocated.
+	// For a Global External Load Balancer this must be a global external
+	// address; for a Regional External Load Balancer it must be a valid
+	// external IP address in the configured region.
 	// +optional
 	IPAddress *string `json:"ipAddress,omitempty"`
 }

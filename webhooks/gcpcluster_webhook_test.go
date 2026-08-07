@@ -52,7 +52,7 @@ func TestGCPCluster_ValidateCreate(t *testing.T) {
 				Spec: infrav1.GCPClusterSpec{
 					LoadBalancer: infrav1.LoadBalancerSpec{
 						LoadBalancerType: ptr.To(infrav1.Internal),
-						ExternalLoadBalancerConfig: &infrav1.LoadBalancer{
+						ExternalLoadBalancerConfig: &infrav1.ExternalLoadBalancer{
 							Name: ptr.To("ignored"),
 						},
 					},

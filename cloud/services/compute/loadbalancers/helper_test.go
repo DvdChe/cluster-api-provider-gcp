@@ -166,7 +166,7 @@ func TestGetExternalLoadBalancerName(t *testing.T) {
 		{
 			name: "returns custom name when set",
 			lbSpec: infrav1.LoadBalancerSpec{
-				ExternalLoadBalancerConfig: &infrav1.LoadBalancer{
+				ExternalLoadBalancerConfig: &infrav1.ExternalLoadBalancer{
 					Name: ptr.To[string]("custom-external-lb"),
 				},
 			},
@@ -182,7 +182,7 @@ func TestGetExternalLoadBalancerName(t *testing.T) {
 		{
 			name: "returns default name when Name is nil",
 			lbSpec: infrav1.LoadBalancerSpec{
-				ExternalLoadBalancerConfig: &infrav1.LoadBalancer{
+				ExternalLoadBalancerConfig: &infrav1.ExternalLoadBalancer{
 					Name: nil,
 				},
 			},

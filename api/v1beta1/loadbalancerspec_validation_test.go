@@ -63,7 +63,7 @@ func TestLoadBalancerSpec_Validate(t *testing.T) {
 			name: "ExternalLoadBalancerConfig with Internal LB emits warning",
 			spec: LoadBalancerSpec{
 				LoadBalancerType: ptr.To(Internal),
-				ExternalLoadBalancerConfig: &LoadBalancer{
+				ExternalLoadBalancerConfig: &ExternalLoadBalancer{
 					Name: ptr.To("ignored"),
 				},
 			},
@@ -73,7 +73,7 @@ func TestLoadBalancerSpec_Validate(t *testing.T) {
 			name: "ExternalLoadBalancerConfig with External LB is valid",
 			spec: LoadBalancerSpec{
 				LoadBalancerType: ptr.To(External),
-				ExternalLoadBalancerConfig: &LoadBalancer{
+				ExternalLoadBalancerConfig: &ExternalLoadBalancer{
 					Name: ptr.To("api-lb"),
 				},
 			},
@@ -83,7 +83,7 @@ func TestLoadBalancerSpec_Validate(t *testing.T) {
 			name: "ExternalLoadBalancerConfig with RegionalExternal LB is valid",
 			spec: LoadBalancerSpec{
 				LoadBalancerType: ptr.To(RegionalExternal),
-				ExternalLoadBalancerConfig: &LoadBalancer{
+				ExternalLoadBalancerConfig: &ExternalLoadBalancer{
 					Name: ptr.To("api-lb"),
 				},
 			},

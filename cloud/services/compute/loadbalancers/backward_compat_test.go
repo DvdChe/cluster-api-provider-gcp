@@ -226,7 +226,7 @@ func TestBackwardCompatibility_DefaultNaming(t *testing.T) {
 		{
 			name: "Custom external LB name is respected",
 			lbSpec: infrav1.LoadBalancerSpec{
-				ExternalLoadBalancerConfig: &infrav1.LoadBalancer{
+				ExternalLoadBalancerConfig: &infrav1.ExternalLoadBalancer{
 					Name: ptr.To("custom-lb"),
 				},
 			},
