@@ -679,6 +679,10 @@ func (s *Service) deleteRegionalTargetTCPProxy(ctx context.Context) error {
 func (s *Service) createOrGetAddress(ctx context.Context, lbname string) (*compute.Address, error) {
 	log := log.FromContext(ctx)
 	addrSpec := s.scope.AddressSpec(lbname)
+	if cfg := s.scope.LoadBalancer().ExternalLoadBalancerConfig; cfg != nil && cfg.IPAddress != nil {
+		// Use the user-provided static IP instead of allocating a new one.
+		addrSpec.Address = *cfg.IPAddress
+	}
 	log.V(2).Info("Looking for address", "name", addrSpec.Name)
 	key := meta.GlobalKey(addrSpec.Name)
 	addr, err := s.addresses.Get(ctx, key)
@@ -710,6 +714,10 @@ func (s *Service) createOrGetRegionalAddress(ctx context.Context, lbname string)
 	addrSpec.Region = s.scope.Region()
 	addrSpec.AddressType = loadBalanceTrafficExternal
 	addrSpec.IpVersion = ""
+	if cfg := s.scope.LoadBalancer().ExternalLoadBalancerConfig; cfg != nil && cfg.IPAddress != nil {
+		// Use the user-provided static IP instead of allocating a new one.
+		addrSpec.Address = *cfg.IPAddress
+	}
 	log.V(2).Info("Looking for address", "name", addrSpec.Name)
 	key := meta.RegionalKey(addrSpec.Name, s.scope.Region())
 	addr, err := s.regionaladdresses.Get(ctx, key)
