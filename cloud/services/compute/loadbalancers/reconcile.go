@@ -83,7 +83,7 @@ func (s *Service) ensureRegionalProxyOnlySubnet() error {
 	)
 }
 
-func shouldCreateExternalLoadBalancer(lbType infrav1.LoadBalancerType) bool {
+func shouldCreateGlobalExternalLoadBalancer(lbType infrav1.LoadBalancerType) bool {
 	return lbType == infrav1.External ||
 		lbType == infrav1.InternalExternal
 }
@@ -149,7 +149,7 @@ func (s *Service) Reconcile(ctx context.Context) error {
 	lbSpec := s.scope.LoadBalancer()
 	lbType := ptr.Deref(lbSpec.LoadBalancerType, infrav1.External)
 	// Create a Global External Proxy Load Balancer by default
-	if shouldCreateExternalLoadBalancer(lbType) {
+	if shouldCreateGlobalExternalLoadBalancer(lbType) {
 		if err = s.createExternalLoadBalancer(ctx, lbType, instancegroups); err != nil {
 			return err
 		}
@@ -177,7 +177,7 @@ func (s *Service) Delete(ctx context.Context) error {
 	var allErrs []error
 	lbSpec := s.scope.LoadBalancer()
 	lbType := ptr.Deref(lbSpec.LoadBalancerType, infrav1.External)
-	if shouldCreateExternalLoadBalancer(lbType) {
+	if shouldCreateGlobalExternalLoadBalancer(lbType) {
 		if err := s.deleteExternalLoadBalancer(ctx); err != nil {
 			allErrs = append(allErrs, err)
 		}

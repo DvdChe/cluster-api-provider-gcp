@@ -71,7 +71,7 @@ func TestIsRegionalExternalLoadBalancer(t *testing.T) {
 	}
 }
 
-func TestShouldCreateExternalLoadBalancer(t *testing.T) {
+func TestShouldCreateGlobalExternalLoadBalancer(t *testing.T) {
 	tests := []struct {
 		name   string
 		lbType infrav1.LoadBalancerType
@@ -106,9 +106,9 @@ func TestShouldCreateExternalLoadBalancer(t *testing.T) {
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
-			got := shouldCreateExternalLoadBalancer(tt.lbType)
+			got := shouldCreateGlobalExternalLoadBalancer(tt.lbType)
 			if got != tt.want {
-				t.Errorf("shouldCreateExternalLoadBalancer() = %v, want %v", got, tt.want)
+				t.Errorf("shouldCreateGlobalExternalLoadBalancer() = %v, want %v", got, tt.want)
 			}
 		})
 	}
