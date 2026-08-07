@@ -1,4 +1,4 @@
-# CORS-4448 Architecture Diagrams
+# Regional External Load Balancer — Architecture Diagrams
 
 ## Current Architecture: Global External Load Balancer
 

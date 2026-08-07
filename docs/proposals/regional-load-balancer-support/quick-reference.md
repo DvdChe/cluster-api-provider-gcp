@@ -1,4 +1,4 @@
-# CORS-4448 Quick Reference
+# Regional External Load Balancer Support — Quick Reference
 
 ## Summary
 Add support for Regional External Load Balancers required by GCD (Google Cloud Distributed/Sovereign Cloud).

@@ -1,4 +1,4 @@
-# CORS-4448: Regional External Load Balancer Support for GCD
+# Regional External Load Balancer Support for GCD
 
 ## Problem Statement
 
@@ -738,7 +738,6 @@ Keep `External` type but add configuration to specify global vs regional.
 
 ## References
 
-- Jira Issue: [CORS-4448](https://redhat.atlassian.net/issues/CORS-4448)
 - GCP Documentation: [Regional External Load Balancers](https://cloud.google.com/load-balancing/docs/tcp#regional)
 - Existing Code: `cloud/services/compute/loadbalancers/reconcile.go`
 - Similar Pattern: Regional Internal LB implementation in same file
