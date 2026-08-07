@@ -84,10 +84,11 @@ func TestGCPCluster_ValidateUpdate(t *testing.T) {
 	g := NewWithT(t)
 
 	tests := []struct {
-		name       string
-		newCluster *infrav1.GCPCluster
-		oldCluster *infrav1.GCPCluster
-		wantErr    bool
+		name        string
+		newCluster  *infrav1.GCPCluster
+		oldCluster  *infrav1.GCPCluster
+		wantErr     bool
+		wantWarning bool
 	}{
 		{
 			name: "GCPCluster with MTU field is within the limits of more than 1300 and less than 8896",
@@ -269,6 +270,52 @@ func TestGCPCluster_ValidateUpdate(t *testing.T) {
 			},
 			wantErr: false,
 		},
+		{
+			name: "invalid LoadBalancerType is rejected on update",
+			newCluster: &infrav1.GCPCluster{
+				Spec: infrav1.GCPClusterSpec{
+					Network: infrav1.NetworkSpec{Mtu: int64(1500)},
+					LoadBalancer: infrav1.LoadBalancerSpec{
+						LoadBalancerType: ptr.To(infrav1.LoadBalancerType("Weird")),
+					},
+				},
+			},
+			oldCluster: &infrav1.GCPCluster{
+				Spec: infrav1.GCPClusterSpec{
+					Network: infrav1.NetworkSpec{Mtu: int64(1500)},
+					LoadBalancer: infrav1.LoadBalancerSpec{
+						LoadBalancerType: ptr.To(infrav1.LoadBalancerType("Weird")),
+					},
+				},
+			},
+			wantErr: true,
+		},
+		{
+			name: "ExternalLoadBalancerConfig with Internal LB emits warning on update",
+			newCluster: &infrav1.GCPCluster{
+				Spec: infrav1.GCPClusterSpec{
+					Network: infrav1.NetworkSpec{Mtu: int64(1500)},
+					LoadBalancer: infrav1.LoadBalancerSpec{
+						LoadBalancerType: ptr.To(infrav1.Internal),
+						ExternalLoadBalancerConfig: &infrav1.ExternalLoadBalancer{
+							Name: ptr.To("ignored"),
+						},
+					},
+				},
+			},
+			oldCluster: &infrav1.GCPCluster{
+				Spec: infrav1.GCPClusterSpec{
+					Network: infrav1.NetworkSpec{Mtu: int64(1500)},
+					LoadBalancer: infrav1.LoadBalancerSpec{
+						LoadBalancerType: ptr.To(infrav1.Internal),
+						ExternalLoadBalancerConfig: &infrav1.ExternalLoadBalancer{
+							Name: ptr.To("ignored"),
+						},
+					},
+				},
+			},
+			wantWarning: true,
+		},
 	}
 	for _, test := range tests {
 		t.Run(test.name, func(t *testing.T) {
@@ -279,7 +326,11 @@ func TestGCPCluster_ValidateUpdate(t *testing.T) {
 			} else {
 				g.Expect(err).NotTo(HaveOccurred())
 			}
-			g.Expect(warn).To(BeNil())
+			if test.wantWarning {
+				g.Expect(warn).NotTo(BeEmpty())
+			} else {
+				g.Expect(warn).To(BeEmpty())
+			}
 		})
 	}
 }
